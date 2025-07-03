@@ -7,11 +7,13 @@
   "scripts": {
     "start": "node nithin.js"
   },
-  "dependencies": {
-    "@mozilla/readability": "^0.6.0",
-    "axios": "^1.6.8",
-    "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "jsdom": "^26.1.0"
-  }
+ "dependencies": {
+  "@mozilla/readability": "^0.4.4",
+  "axios": "^1.6.0",
+  "cors": "^2.8.5",
+  "dotenv": "^16.0.3",
+  "express": "^4.18.2",
+  "jsdom": "^22.1.0",
+  "openai": "^4.0.0"
+}
 }
