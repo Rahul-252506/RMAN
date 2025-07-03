@@ -4,7 +4,6 @@ const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { JSDOM } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
-const chromium = require('@sparticuz/chromium'); // For Render-compatible Puppeteer
 
 puppeteer.use(StealthPlugin());
 
@@ -29,11 +28,14 @@ app.post('/extract', async (req, res) => {
   try {
     console.log("🌀 Launching Puppeteer...");
     browser = await puppeteer.launch({
-      headless: chromium.headless,
-      executablePath: await chromium.executablePath(),
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      ignoreHTTPSErrors: true,
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--single-process',
+        '--no-zygote'
+      ]
     });
 
     const page = await browser.newPage();
@@ -71,13 +73,11 @@ app.post('/extract', async (req, res) => {
   }
 });
 
-// Health check route
+// GET /
 app.get("/", (req, res) => {
   res.send("✅ Rman backend (Puppeteer version) is running");
 });
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
