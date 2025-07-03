@@ -15,7 +15,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// 🔁 Summarization function
+// 🔁 Summarization function with FULL error logging
 async function summarizeText(text) {
   const prompt = `Summarize the following article in 5-6 concise sentences:\n\n${text}`;
 
@@ -31,7 +31,7 @@ async function summarizeText(text) {
 
     return response.choices[0].message.content.trim();
   } catch (err) {
-    console.error("❌ OpenAI summarization error:", err);
+    console.error("❌ OpenAI summarization error:", err?.response?.data || err.message || err);
     throw new Error("Failed to generate summary");
   }
 }
@@ -72,8 +72,10 @@ app.post('/extract', async (req, res) => {
     console.log("📝 Article content length:", article.textContent.length);
 
     if (article.textContent.length > 200) {
-      const summary = await summarizeText(article.textContent.trim());
+      const trimmedContent = article.textContent.trim().slice(0, 5000); // Reduce if hitting token limit
+      const summary = await summarizeText(trimmedContent);
       console.log("✅ Summarization complete.");
+
       return res.json({
         title: article.title,
         summary,
@@ -83,28 +85,28 @@ app.post('/extract', async (req, res) => {
       return res.status(422).json({ error: 'Content too short or not meaningful' });
     }
   } catch (err) {
-    console.error('❌ Extraction or summarization failed:', err);
+    console.error('❌ Extraction or summarization failed:', err?.response?.data || err.message || err);
     res.status(500).json({ error: 'Processing failed', details: err.message });
   }
 });
 
-// 🧪 Optional: Direct summarization test route
+// 🧪 Optional: Direct summarization test
 app.post('/summarize', async (req, res) => {
   const { text } = req.body;
-  if (!text) return res.status(400).json({ error: 'No text provided' });
+  if (!text) return res.status(400).json({ error: 'Text required' });
 
   try {
     const summary = await summarizeText(text);
     return res.json({ summary });
   } catch (err) {
-    console.error("❌ Direct summarization failed:", err);
-    return res.status(500).json({ error: "Summarization failed", details: err.message });
+    console.error("❌ Direct summarize test failed:", err?.response?.data || err.message || err);
+    return res.status(500).json({ error: "Failed to summarize", details: err.message });
   }
 });
 
 // ✅ Health Check
 app.get('/', (req, res) => {
-  res.send('✅ Rman backend (OpenAI summary version) is running');
+  res.send('✅ Rman backend (debug version) is running');
 });
 
 // ✅ Start Server
