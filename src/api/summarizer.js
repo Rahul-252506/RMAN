@@ -1,8 +1,10 @@
 export async function summarizeTextFromURL(url) {
   try {
-    const response = await fetch("http://localhost:5000/extract", {
+    const response = await fetch("https://nithin-backend.onrender.com/extract", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ url }),
     });
 
@@ -12,7 +14,7 @@ export async function summarizeTextFromURL(url) {
         const errorData = await response.json();
         errorMessage = errorData.error || errorMessage;
       } catch {
-        // ignore JSON parse errors here
+        // ignore JSON parse error
       }
       throw new Error(errorMessage);
     }
@@ -20,12 +22,12 @@ export async function summarizeTextFromURL(url) {
     const data = await response.json();
 
     if (!data.content) {
-      throw new Error("No content returned from extraction");
+      throw new Error("No content returned from backend");
     }
 
     return data.content;
   } catch (err) {
-    console.error("summarizeTextFromURL error:", err);
+    console.error("❌ Summarization error:", err);
     throw err;
   }
 }
