@@ -1,29 +1,26 @@
-// backend/index.js
-
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const { JSDOM } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
-const { Configuration, OpenAIApi } = require('openai');
+const OpenAI = require('openai');
 require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// OpenAI API Setup
-const openai = new OpenAIApi(
-  new Configuration({
-    apiKey: process.env.OPENAI_API_KEY,
-  })
-);
+// ✅ Initialize OpenAI with latest SDK format
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-// Summarize function
+// 🔁 Function to summarize content using OpenAI
 async function summarizeText(text) {
+  const prompt = `Summarize the following article in 5-6 concise sentences:\n\n${text}`;
+
   try {
-    const prompt = `Summarize the following article in 5-6 concise sentences:\n\n${text}`;
-    const response = await openai.createChatCompletion({
+    const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
         { role: 'system', content: 'You are a helpful summarizer.' },
@@ -32,14 +29,14 @@ async function summarizeText(text) {
       temperature: 0.7,
     });
 
-    return response.data.choices[0].message.content.trim();
+    return response.choices[0].message.content.trim();
   } catch (err) {
     console.error("❌ OpenAI summarization error:", err.message);
     throw new Error("Failed to generate summary");
   }
 }
 
-// Route: POST /extract
+// 📥 Extract route
 app.post('/extract', async (req, res) => {
   const { url } = req.body;
 
@@ -55,7 +52,7 @@ app.post('/extract', async (req, res) => {
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0',
-        'Accept-Language': 'en-US,en;q=0.9'
+        'Accept-Language': 'en-US,en;q=0.9',
       },
       timeout: 20000,
     });
@@ -68,6 +65,7 @@ app.post('/extract', async (req, res) => {
       const summary = await summarizeText(article.textContent);
       return res.json({
         title: article.title,
+        content: article.textContent.trim(),
         summary,
       });
     } else {
@@ -79,10 +77,11 @@ app.post('/extract', async (req, res) => {
   }
 });
 
-// Health check
+// 🔁 Health check
 app.get("/", (req, res) => {
   res.send("✅ Rman backend (OpenAI summary version) is running");
 });
 
+// ✅ Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
