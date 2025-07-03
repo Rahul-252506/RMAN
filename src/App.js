@@ -4,53 +4,58 @@ import logo from "./assets/logo.png";
 import darthVader from "./assets/darth-vader.jpg";
 import starwarsBg from "./assets/starwars-bg.jpg";
 
-// ✅ Safe TTS function that waits for voices
-async function convertTextToSpeech(text, onEndCallback) {
-  return new Promise((resolve, reject) => {
-    if (!window.speechSynthesis) {
-      reject(new Error("Speech Synthesis not supported in this browser."));
-      return;
-    }
-
-    const loadVoices = () => {
-      const voices = window.speechSynthesis.getVoices();
-      if (!voices.length) {
-        window.speechSynthesis.onvoiceschanged = () => loadVoices();
-        return;
-      }
-
-      window.speechSynthesis.cancel(); // cancel ongoing speech
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-US";
-
-      const preferredVoice = voices.find((v) =>
-        v.name.includes("Google US English")
-      );
-      if (preferredVoice) utterance.voice = preferredVoice;
-
-      utterance.onend = () => {
-        if (onEndCallback) onEndCallback();
-        resolve();
-      };
-
-      utterance.onerror = (e) => reject(e.error);
-
-      window.speechSynthesis.speak(utterance);
-    };
-
-    loadVoices();
-  });
-}
-
 function App() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [article, setArticle] = useState(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const speakingRef = useRef(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const utteranceRef = useRef(null);
 
+  // Function to start speaking text
+  const startSpeaking = (text) => {
+    if (!window.speechSynthesis) {
+      setError("Speech Synthesis not supported in this browser.");
+      return;
+    }
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    // Create a new utterance and save ref
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-US";
+
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find((v) =>
+      v.name.includes("Google US English")
+    );
+    if (preferredVoice) utterance.voice = preferredVoice;
+
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setIsPaused(false);
+    };
+
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setIsPaused(false);
+      utteranceRef.current = null;
+    };
+
+    utterance.onerror = (e) => {
+      setError("Speech synthesis error: " + e.error);
+      setIsSpeaking(false);
+      setIsPaused(false);
+      utteranceRef.current = null;
+    };
+
+    utteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Button handlers
   const handleGenerate = async () => {
     if (!url.trim()) {
       setError("Please enter a valid URL");
@@ -72,41 +77,48 @@ function App() {
       if (!response.ok) throw new Error(data.error || "Something went wrong");
 
       setArticle(data);
-      setIsSpeaking(true);
-      speakingRef.current = true;
 
-      await convertTextToSpeech(data.summary, () => {
-        setIsSpeaking(false);
-        speakingRef.current = false;
-      });
+      // Start speaking summary
+      startSpeaking(data.summary);
     } catch (err) {
       setError(err.message);
       setIsSpeaking(false);
-      speakingRef.current = false;
+      setIsPaused(false);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handlePlay = () => {
-    if (!article?.summary || speakingRef.current) return;
-    setIsSpeaking(true);
-    speakingRef.current = true;
+    if (!article?.summary) return;
+    if (isSpeaking && !isPaused) return; // Already speaking
 
-    convertTextToSpeech(article.summary, () => {
-      setIsSpeaking(false);
-      speakingRef.current = false;
-    });
+    startSpeaking(article.summary);
+  };
+
+  const handlePause = () => {
+    if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+      window.speechSynthesis.pause();
+      setIsPaused(true);
+    }
+  };
+
+  const handleResume = () => {
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+      setIsPaused(false);
+    }
   };
 
   const handleStop = () => {
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
-    speakingRef.current = false;
+    setIsPaused(false);
+    utteranceRef.current = null;
   };
 
   useEffect(() => {
-    // Cancel speech if component unmounts
+    // Cleanup on unmount: stop speech
     return () => window.speechSynthesis.cancel();
   }, []);
 
@@ -121,7 +133,11 @@ function App() {
           onClick={() => (window.location.href = "/darth-vader")}
           className="rounded-full overflow-hidden w-16 h-16 border-4 border-yellow-500 shadow-lg hover:scale-110 transition-transform duration-300"
         >
-          <img src={darthVader} alt="Darth Vader" className="w-full h-full object-cover" />
+          <img
+            src={darthVader}
+            alt="Darth Vader"
+            className="w-full h-full object-cover"
+          />
         </button>
       </div>
 
@@ -187,10 +203,24 @@ function App() {
           <div className="flex space-x-4 mt-6">
             <button
               onClick={handlePlay}
-              disabled={isSpeaking}
+              disabled={isSpeaking && !isPaused}
               className="px-4 py-2 bg-yellow-400 text-black font-starwars rounded hover:bg-yellow-500 transition disabled:opacity-50"
             >
               ▶️ Play
+            </button>
+            <button
+              onClick={handlePause}
+              disabled={!isSpeaking || isPaused}
+              className="px-4 py-2 bg-yellow-400 text-black font-starwars rounded hover:bg-yellow-500 transition disabled:opacity-50"
+            >
+              ⏸ Pause
+            </button>
+            <button
+              onClick={handleResume}
+              disabled={!isSpeaking || !isPaused}
+              className="px-4 py-2 bg-yellow-400 text-black font-starwars rounded hover:bg-yellow-500 transition disabled:opacity-50"
+            >
+              ▶️ Resume
             </button>
             <button
               onClick={handleStop}
