@@ -6,17 +6,22 @@ const { JSDOM } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
 const OpenAI = require('openai');
 
-
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ Initialize OpenAI with latest SDK format
+// ✅ Initialize OpenAI
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// 🔁 Function to summarize content using OpenAI
+// ❗ Optional: Exit if no API key
+if (!process.env.OPENAI_API_KEY) {
+  console.error("❌ OPENAI_API_KEY not set in environment variables.");
+  process.exit(1);
+}
+
+// 🔁 Summarization function
 async function summarizeText(text) {
   const prompt = `Summarize the following article in 5-6 concise sentences:\n\n${text}`;
 
@@ -37,7 +42,7 @@ async function summarizeText(text) {
   }
 }
 
-// 📥 Extract route
+// 📥 Extract + Summarize Route
 app.post('/extract', async (req, res) => {
   const { url } = req.body;
 
@@ -63,11 +68,12 @@ app.post('/extract', async (req, res) => {
     const article = reader.parse();
 
     if (article?.textContent && article.textContent.length > 200) {
-      const summary = await summarizeText(article.textContent);
+      const trimmedContent = article.textContent.trim().slice(0, 8000); // Optional safety limit
+      const summary = await summarizeText(trimmedContent);
+
       return res.json({
         title: article.title,
-        content: article.textContent.trim(),
-        summary,
+        summary, // ✅ Only returning summary
       });
     } else {
       return res.status(422).json({ error: 'Content too short or not meaningful' });
@@ -78,11 +84,11 @@ app.post('/extract', async (req, res) => {
   }
 });
 
-// 🔁 Health check
-app.get("/", (req, res) => {
-  res.send("✅ Rman backend (OpenAI summary version) is running");
+// ✅ Health Check
+app.get('/', (req, res) => {
+  res.send('✅ Rman backend (summary-only version) is running');
 });
 
-// ✅ Start server
+// ✅ Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
