@@ -1,10 +1,11 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const { JSDOM } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
 const OpenAI = require('openai');
-require('dotenv').config();
+
 
 const app = express();
 app.use(cors());
