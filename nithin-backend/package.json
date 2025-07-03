@@ -1,14 +1,15 @@
 {
   "name": "nithin-backend",
   "version": "1.0.0",
+  "description": "",
   "main": "nithin.js",
+  "type": "commonjs",
   "scripts": {
+    "start": "node nithin.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
     "cors": "^2.8.5",
@@ -16,6 +17,24 @@
     "jsdom": "^26.1.0",
     "puppeteer": "^24.11.2",
     "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-stealth": "^2.11.2"
-  }
-}
+    "puppeteer-extra-plugin-stealth": "^2.11.2
+{
+  "name": "nithin-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "nithin.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node nithin.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "jsdom": "^26.1.0",
+    "puppeteer": "^24.11.2",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2
