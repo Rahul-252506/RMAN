@@ -1,168 +1,71 @@
-import React, { useState } from "react";
-import { convertTextToSpeech } from "./api/tts";
-import { summarizeTextFromURL } from "./api/summarizer";
+import React from "react";
+import "./App.css"; // Make sure this imports your Tailwind + custom fonts
 
 function App() {
-  const [urlInput, setUrlInput] = useState("");
-  const [summaryText, setSummaryText] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [error, setError] = useState(null);
-
-  const handleSummarize = async () => {
-    if (!urlInput.trim()) return;
-    setLoading(true);
-    setError(null);
-    setSummaryText("");
-    window.speechSynthesis.cancel(); // Cancel any existing speech
-
-    try {
-      const summary = await summarizeTextFromURL(urlInput);
-      setSummaryText(summary);
-      await convertTextToSpeech(summary);
-      setIsSpeaking(true);
-    } catch (err) {
-      setError("Error: " + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePause = () => {
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.pause();
-    }
-  };
-
-  const handleResume = () => {
-    if (window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
-    }
-  };
-
-  const handleStop = () => {
-    window.speechSynthesis.cancel();
-    setIsSpeaking(false);
-  };
-
   return (
-    <div style={{ padding: "2rem", fontFamily: "Arial, sans-serif", maxWidth: 600, margin: "auto" }}>
-      <h1 style={{ textAlign: "center", marginBottom: "1rem" }}>🗣️ Talkify – Summarize & Speak</h1>
+    <div
+      className="relative min-h-screen flex flex-col justify-center items-center bg-cover bg-center"
+      style={{
+        backgroundImage: "url('/starwars-bg.jpg')",
+      }}
+    >
+<div className="fixed bottom-4 right-4 z-50">
+  <button
+    onClick={() => window.location.href = "/darth-vader"}
+    className="rounded-full overflow-hidden w-16 h-16 border-4 border-yellow-500 shadow-lg hover:scale-110 transition-transform duration-300"
+  >
+    <img
+      src="/darth-vader.jpg"
+      alt="Darth Vader"
+      className="w-full h-full object-cover"
+    />
+  </button>
+</div>
 
-      <input
-        type="text"
-        placeholder="Enter article URL"
-        value={urlInput}
-        onChange={(e) => setUrlInput(e.target.value)}
-        style={{
-          width: "100%",
-          padding: "0.75rem",
-          fontSize: "1rem",
-          borderRadius: "6px",
-          border: "1px solid #ccc",
-          boxSizing: "border-box",
-        }}
-      />
 
-      <button
-        onClick={handleSummarize}
-        disabled={loading}
-        style={{
-          marginTop: "1rem",
-          padding: "0.6rem 1.2rem",
-          fontSize: "1.1rem",
-          backgroundColor: "#28a745",
-          color: "white",
-          border: "none",
-          borderRadius: "6px",
-          cursor: loading ? "not-allowed" : "pointer",
-          display: "block",
-          marginLeft: "auto",
-          marginRight: "auto",
-          minWidth: 180,
-        }}
-      >
-        {loading ? "Summarizing..." : "Summarize & Speak"}
-      </button>
+      {/* Top bar with logo, Login & Signup */}
+      <div className="absolute top-0 left-0 right-0 bg-black bg-opacity-60 flex justify-between items-center px-8 py-4 z-10">
+        {/* Logo on the top-left */}
+        <div className="flex items-center">
+          <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-yellow-400">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+          </div>
+        </div>
 
-      {isSpeaking && (
-        <div
-          style={{
-            marginTop: "1rem",
-            display: "flex",
-            justifyContent: "center",
-            gap: "1.5rem",
-            alignItems: "center",
-          }}
-        >
-          <button
-            onClick={handlePause}
-            aria-label="Pause"
-            title="Pause"
-            style={controlButtonStyle}
-          >
-            ⏸️
+        {/* Login and Signup on the top-right */}
+        <div className="flex space-x-4 items-center">
+          <button className="text-yellow-400 font-starwars text-lg hover:text-yellow-500 transition">
+            Login
           </button>
-          <button
-            onClick={handleResume}
-            aria-label="Resume"
-            title="Resume"
-            style={controlButtonStyle}
-          >
-            ▶️
-          </button>
-          <button
-            onClick={handleStop}
-            aria-label="Stop"
-            title="Stop"
-            style={controlButtonStyle}
-          >
-            ⏹️
+          <button className="text-yellow-400 font-starwars text-lg border border-yellow-400 rounded-full px-4 py-1 hover:bg-yellow-400 hover:text-black transition">
+            Signup
           </button>
         </div>
-      )}
+      </div>
 
-      {error && (
-        <p style={{ color: "red", marginTop: "1rem", textAlign: "center" }}>
-          {error}
-        </p>
-      )}
+      {/* Main Title */}
+      <h1 className="text-yellow-400 text-6xl md:text-8xl font-starwars text-center drop-shadow-[2px_2px_0_black] mb-6">
+        Talkify: The Podcast Force Awakens
+      </h1>
 
-      {summaryText && (
-        <div
-          style={{
-            marginTop: "1.5rem",
-            background: "#f9f9f9",
-            padding: "1rem",
-            borderRadius: "8px",
-            boxShadow: "0 2px 5px rgba(0,0,0,0.1)",
-            fontSize: "1.1rem",
-            lineHeight: "1.5",
-            whiteSpace: "pre-wrap",
-          }}
-        >
-          <strong>Summary:</strong>
-          <p>{summaryText}</p>
-        </div>
-      )}
+      {/* Subtitle */}
+      <p className="text-yellow-400 text-2xl md:text-3xl font-starwars text-center drop-shadow-[2px_2px_0_black] mb-12 max-w-2xl">
+        Paste a URL below and generate your Star Wars-inspired podcast!
+      </p>
+
+      {/* URL Input + Generate Button */}
+      <div className="flex flex-col sm:flex-row items-center w-full max-w-xl space-y-4 sm:space-y-0 sm:space-x-4 z-10">
+        <input
+          type="text"
+          placeholder="Enter article URL..."
+          className="flex-grow p-4 rounded-lg text-black font-starwars text-lg outline-none border-2 border-yellow-400 focus:ring-2 focus:ring-yellow-500 transition"
+        />
+        <button className="px-6 py-4 bg-yellow-400 text-black font-starwars text-lg rounded-lg hover:bg-yellow-500 transition">
+          Generate Podcast
+        </button>
+      </div>
     </div>
   );
 }
-
-const controlButtonStyle = {
-  fontSize: "1.8rem",
-  backgroundColor: "#007bff",
-  border: "none",
-  color: "white",
-  borderRadius: "50%",
-  width: "48px",
-  height: "48px",
-  cursor: "pointer",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
-  transition: "background-color 0.3s ease",
-};
 
 export default App;
