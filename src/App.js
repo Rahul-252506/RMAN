@@ -4,58 +4,54 @@ import logo from "./assets/logo.png";
 import darthVader from "./assets/darth-vader.jpg";
 import starwarsBg from "./assets/starwars-bg.jpg";
 
+// Text-to-Speech function that waits for voices
+function convertTextToSpeech(text, onEndCallback) {
+  return new Promise((resolve, reject) => {
+    if (!window.speechSynthesis) {
+      reject(new Error("Speech Synthesis not supported"));
+      return;
+    }
+
+    const speak = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length === 0) {
+        // Voices not loaded yet, try again
+        window.speechSynthesis.onvoiceschanged = speak;
+        return;
+      }
+
+      window.speechSynthesis.cancel(); // stop any ongoing speech
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-US";
+
+      // Use Google US English if available
+      const preferredVoice = voices.find(v => v.name.includes("Google US English"));
+      if (preferredVoice) utterance.voice = preferredVoice;
+
+      utterance.onend = () => {
+        if (onEndCallback) onEndCallback();
+        resolve();
+      };
+
+      utterance.onerror = (e) => reject(e.error);
+
+      window.speechSynthesis.speak(utterance);
+    };
+
+    speak();
+  });
+}
+
 function App() {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [article, setArticle] = useState(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const utteranceRef = useRef(null);
+  const speakingRef = useRef(false);
 
-  // Function to start speaking text
-  const startSpeaking = (text) => {
-    if (!window.speechSynthesis) {
-      setError("Speech Synthesis not supported in this browser.");
-      return;
-    }
-
-    // Cancel any ongoing speech
-    window.speechSynthesis.cancel();
-
-    // Create a new utterance and save ref
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US";
-
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find((v) =>
-      v.name.includes("Google US English")
-    );
-    if (preferredVoice) utterance.voice = preferredVoice;
-
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-      setIsPaused(false);
-    };
-
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      setIsPaused(false);
-      utteranceRef.current = null;
-    };
-
-    utterance.onerror = (e) => {
-      setError("Speech synthesis error: " + e.error);
-      setIsSpeaking(false);
-      setIsPaused(false);
-      utteranceRef.current = null;
-    };
-
-    utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
-  };
-
-  // Button handlers
+  // Play or generate podcast
   const handleGenerate = async () => {
     if (!url.trim()) {
       setError("Please enter a valid URL");
@@ -77,48 +73,42 @@ function App() {
       if (!response.ok) throw new Error(data.error || "Something went wrong");
 
       setArticle(data);
+      setIsSpeaking(true);
+      speakingRef.current = true;
 
-      // Start speaking summary
-      startSpeaking(data.summary);
+      // Use content for speech (full article text)
+      await convertTextToSpeech(data.content, () => {
+        setIsSpeaking(false);
+        speakingRef.current = false;
+      });
     } catch (err) {
       setError(err.message);
       setIsSpeaking(false);
-      setIsPaused(false);
-    } finally {
-      setLoading(false);
+      speakingRef.current = false;
     }
+
+    setLoading(false);
   };
 
   const handlePlay = () => {
-    if (!article?.summary) return;
-    if (isSpeaking && !isPaused) return; // Already speaking
+    if (!article?.content || speakingRef.current) return;
+    setIsSpeaking(true);
+    speakingRef.current = true;
 
-    startSpeaking(article.summary);
-  };
-
-  const handlePause = () => {
-    if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
-      window.speechSynthesis.pause();
-      setIsPaused(true);
-    }
-  };
-
-  const handleResume = () => {
-    if (window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
-      setIsPaused(false);
-    }
+    convertTextToSpeech(article.content, () => {
+      setIsSpeaking(false);
+      speakingRef.current = false;
+    });
   };
 
   const handleStop = () => {
     window.speechSynthesis.cancel();
     setIsSpeaking(false);
-    setIsPaused(false);
-    utteranceRef.current = null;
+    speakingRef.current = false;
   };
 
   useEffect(() => {
-    // Cleanup on unmount: stop speech
+    // Cancel speech if component unmounts
     return () => window.speechSynthesis.cancel();
   }, []);
 
@@ -133,11 +123,7 @@ function App() {
           onClick={() => (window.location.href = "/darth-vader")}
           className="rounded-full overflow-hidden w-16 h-16 border-4 border-yellow-500 shadow-lg hover:scale-110 transition-transform duration-300"
         >
-          <img
-            src={darthVader}
-            alt="Darth Vader"
-            className="w-full h-full object-cover"
-          />
+          <img src={darthVader} alt="Darth Vader" className="w-full h-full object-cover" />
         </button>
       </div>
 
@@ -203,24 +189,10 @@ function App() {
           <div className="flex space-x-4 mt-6">
             <button
               onClick={handlePlay}
-              disabled={isSpeaking && !isPaused}
+              disabled={isSpeaking}
               className="px-4 py-2 bg-yellow-400 text-black font-starwars rounded hover:bg-yellow-500 transition disabled:opacity-50"
             >
               ▶️ Play
-            </button>
-            <button
-              onClick={handlePause}
-              disabled={!isSpeaking || isPaused}
-              className="px-4 py-2 bg-yellow-400 text-black font-starwars rounded hover:bg-yellow-500 transition disabled:opacity-50"
-            >
-              ⏸ Pause
-            </button>
-            <button
-              onClick={handleResume}
-              disabled={!isSpeaking || !isPaused}
-              className="px-4 py-2 bg-yellow-400 text-black font-starwars rounded hover:bg-yellow-500 transition disabled:opacity-50"
-            >
-              ▶️ Resume
             </button>
             <button
               onClick={handleStop}
