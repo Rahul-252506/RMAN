@@ -4,15 +4,15 @@ const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { JSDOM } = require('jsdom');
 const { Readability } = require('@mozilla/readability');
+const chromium = require('@sparticuz/chromium'); // For Render-compatible Puppeteer
 
-// Enable stealth mode for Puppeteer
 puppeteer.use(StealthPlugin());
 
 const app = express();
 app.use(cors());
-app.use(express.json()); // For parsing application/json
+app.use(express.json());
 
-// POST /extract route for article extraction
+// POST /extract route
 app.post('/extract', async (req, res) => {
   const { url } = req.body;
   console.log("✅ Received URL:", url);
@@ -29,18 +29,17 @@ app.post('/extract', async (req, res) => {
   try {
     console.log("🌀 Launching Puppeteer...");
     browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--single-process',
-        '--no-zygote'
-      ]
+      headless: chromium.headless,
+      executablePath: await chromium.executablePath(),
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      ignoreHTTPSErrors: true,
     });
 
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115 Safari/537.36');
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115 Safari/537.36'
+    );
     await page.setExtraHTTPHeaders({ 'accept-language': 'en-US,en;q=0.9' });
 
     console.log("🌐 Navigating to:", url);
@@ -72,11 +71,13 @@ app.post('/extract', async (req, res) => {
   }
 });
 
-// Simple health check route
+// Health check route
 app.get("/", (req, res) => {
   res.send("✅ Rman backend (Puppeteer version) is running");
 });
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
