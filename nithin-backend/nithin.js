@@ -32,6 +32,7 @@ app.post('/extract', async (req, res) => {
     console.log("Launching browser...");
     browser = await puppeteer.launch({
       headless: true,
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH ||,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -40,7 +41,7 @@ app.post('/extract', async (req, res) => {
         '--no-zygote',
         '--single-process',
       ],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+      
     });
 
     const page = await browser.newPage();
