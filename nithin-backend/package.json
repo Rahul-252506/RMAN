@@ -1,17 +1,19 @@
 {
   "name": "nithin-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "nithin.js",
   "type": "commonjs",
+  "main": "nithin.js",
   "scripts": {
-    "start": "node nithin.js"
+    "start": "node nithin.js",
+    "postinstall": "puppeteer install"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
-    "axios": "^1.6.8",
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "jsdom": "^26.1.0"
+    "jsdom": "^26.1.0",
+    "puppeteer": "^24.11.2",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   }
 }
