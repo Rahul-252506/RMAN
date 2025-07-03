@@ -168,8 +168,7 @@ function App() {
           <h2 className="text-3xl font-starwars border-b border-yellow-400 pb-2">
             {article.title}
           </h2>
-          <p className="text-yellow-300 font-starwars text-xl">Summary:</p>
-          <p className="text-lg font-starwars">{article.summary}</p>
+        
           <p className="text-yellow-300 font-starwars text-xl mt-4">Full Article:</p>
           <p className="text-md font-starwars whitespace-pre-line">{article.content}</p>
 
