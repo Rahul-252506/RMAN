@@ -17,6 +17,6 @@
     "jsdom": "^26.1.0",
     "puppeteer": "^24.11.2",
     "puppeteer-extra": "^3.3.6",
-    "puppeteer-extra-plugin-slealth": "^2.11.2"
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   }
 }
