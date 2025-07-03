@@ -4,7 +4,7 @@ import logo from "./assets/logo.png";
 import darthVader from "./assets/darth-vader.jpg";
 import starwarsBg from "./assets/starwars-bg.jpg";
 
-// TTS helper function
+// TTS function
 function convertTextToSpeech(text, onEndCallback) {
   return new Promise((resolve, reject) => {
     if (!window.speechSynthesis) {
@@ -12,7 +12,7 @@ function convertTextToSpeech(text, onEndCallback) {
       return;
     }
 
-    window.speechSynthesis.cancel(); // cancel any current speech
+    window.speechSynthesis.cancel(); // cancel any ongoing speech
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "en-US";
@@ -26,9 +26,7 @@ function convertTextToSpeech(text, onEndCallback) {
       resolve();
     };
 
-    utterance.onerror = (e) => {
-      reject(e.error);
-    };
+    utterance.onerror = (e) => reject(e.error);
 
     window.speechSynthesis.speak(utterance);
   });
@@ -63,7 +61,6 @@ function App() {
       if (!response.ok) throw new Error(data.error || "Something went wrong");
 
       setArticle(data);
-
       setIsSpeaking(true);
       speakingRef.current = true;
 
@@ -71,6 +68,7 @@ function App() {
         setIsSpeaking(false);
         speakingRef.current = false;
       });
+
     } catch (err) {
       setError(err.message);
       setIsSpeaking(false);
@@ -82,7 +80,6 @@ function App() {
 
   const handlePlay = () => {
     if (!article?.summary || speakingRef.current) return;
-
     setIsSpeaking(true);
     speakingRef.current = true;
 
@@ -99,9 +96,7 @@ function App() {
   };
 
   useEffect(() => {
-    return () => {
-      window.speechSynthesis.cancel();
-    };
+    return () => window.speechSynthesis.cancel();
   }, []);
 
   return (
@@ -109,21 +104,17 @@ function App() {
       className="relative min-h-screen flex flex-col justify-center items-center bg-cover bg-center p-8"
       style={{ backgroundImage: `url(${starwarsBg})` }}
     >
-      {/* Darth Vader Button */}
+      {/* Vader Button */}
       <div className="fixed bottom-4 right-4 z-50">
         <button
           onClick={() => (window.location.href = "/darth-vader")}
           className="rounded-full overflow-hidden w-16 h-16 border-4 border-yellow-500 shadow-lg hover:scale-110 transition-transform duration-300"
         >
-          <img
-            src={darthVader}
-            alt="Darth Vader"
-            className="w-full h-full object-cover"
-          />
+          <img src={darthVader} alt="Darth Vader" className="w-full h-full object-cover" />
         </button>
       </div>
 
-      {/* Top Bar */}
+      {/* Top bar */}
       <div className="absolute top-0 left-0 right-0 bg-black bg-opacity-60 flex justify-between items-center px-8 py-4 z-10">
         <div className="flex items-center">
           <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-yellow-400">
@@ -140,17 +131,15 @@ function App() {
         </div>
       </div>
 
-      {/* Main Title */}
+      {/* Title & Subtitle */}
       <h1 className="text-yellow-400 text-6xl md:text-8xl font-starwars text-center drop-shadow-[2px_2px_0_black] mb-6">
         Talkify: The Podcast Force Awakens
       </h1>
-
-      {/* Subtitle */}
       <p className="text-yellow-400 text-2xl md:text-3xl font-starwars text-center drop-shadow-[2px_2px_0_black] mb-12 max-w-2xl">
         Paste a URL below and generate your Star Wars-inspired podcast!
       </p>
 
-      {/* Input + Generate */}
+      {/* Input */}
       <div className="flex flex-col sm:flex-row items-center w-full max-w-xl space-y-4 sm:space-y-0 sm:space-x-4 z-10">
         <input
           type="text"
@@ -179,25 +168,26 @@ function App() {
           <h2 className="text-3xl font-starwars border-b border-yellow-400 pb-2">
             {article.title}
           </h2>
-          <p className="text-lg font-starwars whitespace-pre-line">
-            {article.summary}
-          </p>
+          <p className="text-yellow-300 font-starwars text-xl">Summary:</p>
+          <p className="text-lg font-starwars">{article.summary}</p>
+          <p className="text-yellow-300 font-starwars text-xl mt-4">Full Article:</p>
+          <p className="text-md font-starwars whitespace-pre-line">{article.content}</p>
 
-          {/* Play/Stop Buttons */}
-          <div className="flex space-x-4 mt-4">
+          {/* TTS Controls */}
+          <div className="flex space-x-4 mt-6">
             <button
               onClick={handlePlay}
               disabled={isSpeaking}
               className="px-4 py-2 bg-yellow-400 text-black font-starwars rounded hover:bg-yellow-500 transition disabled:opacity-50"
             >
-              Play
+              ▶️ Play
             </button>
             <button
               onClick={handleStop}
               disabled={!isSpeaking}
               className="px-4 py-2 bg-yellow-400 text-black font-starwars rounded hover:bg-yellow-500 transition disabled:opacity-50"
             >
-              Stop
+              ⏹ Stop
             </button>
           </div>
         </div>
