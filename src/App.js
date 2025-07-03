@@ -4,31 +4,42 @@ import logo from "./assets/logo.png";
 import darthVader from "./assets/darth-vader.jpg";
 import starwarsBg from "./assets/starwars-bg.jpg";
 
-// TTS function
-function convertTextToSpeech(text, onEndCallback) {
+// ✅ Safe TTS function that waits for voices
+async function convertTextToSpeech(text, onEndCallback) {
   return new Promise((resolve, reject) => {
     if (!window.speechSynthesis) {
       reject(new Error("Speech Synthesis not supported in this browser."));
       return;
     }
 
-    window.speechSynthesis.cancel(); // cancel any ongoing speech
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (!voices.length) {
+        window.speechSynthesis.onvoiceschanged = () => loadVoices();
+        return;
+      }
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US";
+      window.speechSynthesis.cancel(); // cancel ongoing speech
 
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find((v) => v.name === "Google US English");
-    if (preferredVoice) utterance.voice = preferredVoice;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-US";
 
-    utterance.onend = () => {
-      if (onEndCallback) onEndCallback();
-      resolve();
+      const preferredVoice = voices.find((v) =>
+        v.name.includes("Google US English")
+      );
+      if (preferredVoice) utterance.voice = preferredVoice;
+
+      utterance.onend = () => {
+        if (onEndCallback) onEndCallback();
+        resolve();
+      };
+
+      utterance.onerror = (e) => reject(e.error);
+
+      window.speechSynthesis.speak(utterance);
     };
 
-    utterance.onerror = (e) => reject(e.error);
-
-    window.speechSynthesis.speak(utterance);
+    loadVoices();
   });
 }
 
@@ -68,7 +79,6 @@ function App() {
         setIsSpeaking(false);
         speakingRef.current = false;
       });
-
     } catch (err) {
       setError(err.message);
       setIsSpeaking(false);
@@ -96,6 +106,7 @@ function App() {
   };
 
   useEffect(() => {
+    // Cancel speech if component unmounts
     return () => window.speechSynthesis.cancel();
   }, []);
 
@@ -168,7 +179,7 @@ function App() {
           <h2 className="text-3xl font-starwars border-b border-yellow-400 pb-2">
             {article.title}
           </h2>
-        
+
           <p className="text-yellow-300 font-starwars text-xl mt-4">Full Article:</p>
           <p className="text-md font-starwars whitespace-pre-line">{article.content}</p>
 
