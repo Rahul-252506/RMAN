@@ -1,6 +1,6 @@
 export async function summarizeTextFromURL(url) {
   try {
-    const response = await fetch("https://nithin-backend.onrender.com/extract", {
+    const response = await fetch("https://rman.onrender.com/extract", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
