@@ -15,12 +15,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// ❗ Optional: Exit if no API key
-if (!process.env.OPENAI_API_KEY) {
-  console.error("❌ OPENAI_API_KEY not set in environment variables.");
-  process.exit(1);
-}
-
 // 🔁 Summarization function
 async function summarizeText(text) {
   const prompt = `Summarize the following article in 5-6 concise sentences:\n\n${text}`;
@@ -37,7 +31,7 @@ async function summarizeText(text) {
 
     return response.choices[0].message.content.trim();
   } catch (err) {
-    console.error("❌ OpenAI summarization error:", err.message);
+    console.error("❌ OpenAI summarization error:", err);
     throw new Error("Failed to generate summary");
   }
 }
@@ -45,6 +39,7 @@ async function summarizeText(text) {
 // 📥 Extract + Summarize Route
 app.post('/extract', async (req, res) => {
   const { url } = req.body;
+  console.log("📥 Received URL:", url);
 
   if (!url || typeof url !== 'string') {
     return res.status(400).json({ error: 'Invalid URL' });
@@ -55,6 +50,7 @@ app.post('/extract', async (req, res) => {
   }
 
   try {
+    console.log("🌐 Fetching article...");
     const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0',
@@ -63,30 +59,52 @@ app.post('/extract', async (req, res) => {
       timeout: 20000,
     });
 
+    console.log("✅ Article fetched.");
     const dom = new JSDOM(response.data, { url });
     const reader = new Readability(dom.window.document);
     const article = reader.parse();
 
-    if (article?.textContent && article.textContent.length > 200) {
-      const trimmedContent = article.textContent.trim().slice(0, 8000); // Optional safety limit
-      const summary = await summarizeText(trimmedContent);
+    if (!article || !article.textContent) {
+      console.log("⚠ Article parsing failed.");
+      return res.status(422).json({ error: 'Could not extract meaningful content' });
+    }
 
+    console.log("📝 Article content length:", article.textContent.length);
+
+    if (article.textContent.length > 200) {
+      const summary = await summarizeText(article.textContent.trim());
+      console.log("✅ Summarization complete.");
       return res.json({
         title: article.title,
-        summary, // ✅ Only returning summary
+        summary,
       });
     } else {
+      console.log("⚠ Content too short.");
       return res.status(422).json({ error: 'Content too short or not meaningful' });
     }
   } catch (err) {
-    console.error('❌ Extraction or summarization failed:', err.message);
+    console.error('❌ Extraction or summarization failed:', err);
     res.status(500).json({ error: 'Processing failed', details: err.message });
+  }
+});
+
+// 🧪 Optional: Direct summarization test route
+app.post('/summarize', async (req, res) => {
+  const { text } = req.body;
+  if (!text) return res.status(400).json({ error: 'No text provided' });
+
+  try {
+    const summary = await summarizeText(text);
+    return res.json({ summary });
+  } catch (err) {
+    console.error("❌ Direct summarization failed:", err);
+    return res.status(500).json({ error: "Summarization failed", details: err.message });
   }
 });
 
 // ✅ Health Check
 app.get('/', (req, res) => {
-  res.send('✅ Rman backend (summary-only version) is running');
+  res.send('✅ Rman backend (OpenAI summary version) is running');
 });
 
 // ✅ Start Server
