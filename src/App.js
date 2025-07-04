@@ -1,207 +1,109 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import "./App.css";
+import starwarsBg from "./assets/starwars-bg.jpg";
 import logo from "./assets/logo.png";
 import darthVader from "./assets/darth-vader.jpg";
-import starwarsBg from "./assets/starwars-bg.jpg";
-
-// Text-to-Speech function that waits for voices
-function convertTextToSpeech(text, onEndCallback) {
-  return new Promise((resolve, reject) => {
-    if (!window.speechSynthesis) {
-      reject(new Error("Speech Synthesis not supported"));
-      return;
-    }
-
-    const speak = () => {
-      const voices = window.speechSynthesis.getVoices();
-      if (voices.length === 0) {
-        // Voices not loaded yet, try again
-        window.speechSynthesis.onvoiceschanged = speak;
-        return;
-      }
-
-      window.speechSynthesis.cancel(); // stop any ongoing speech
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-US";
-
-      // Use Google US English if available
-      const preferredVoice = voices.find(v => v.name.includes("Google US English"));
-      if (preferredVoice) utterance.voice = preferredVoice;
-
-      utterance.onend = () => {
-        if (onEndCallback) onEndCallback();
-        resolve();
-      };
-
-      utterance.onerror = (e) => reject(e.error);
-
-      window.speechSynthesis.speak(utterance);
-    };
-
-    speak();
-  });
-}
 
 function App() {
   const [url, setUrl] = useState("");
+  const [articleText, setArticleText] = useState("");
+  const [audioUrl, setAudioUrl] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [article, setArticle] = useState(null);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const speakingRef = useRef(false);
 
-  // Play or generate podcast
   const handleGenerate = async () => {
-    if (!url.trim()) {
-      setError("Please enter a valid URL");
-      return;
-    }
-
     setLoading(true);
-    setError(null);
-    setArticle(null);
-
+    setArticleText("");
+    setAudioUrl("");
     try {
-      const response = await fetch("https://rman.onrender.com/extract", {
+      const response = await fetch("http://localhost:5000/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
-
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Something went wrong");
-
-      setArticle(data);
-      setIsSpeaking(true);
-      speakingRef.current = true;
-
-      // Use content for speech (full article text)
-      await convertTextToSpeech(data.content, () => {
-        setIsSpeaking(false);
-        speakingRef.current = false;
-      });
-    } catch (err) {
-      setError(err.message);
-      setIsSpeaking(false);
-      speakingRef.current = false;
+      setArticleText(data.text);
+      setAudioUrl(data.audioUrl);
+    } catch (error) {
+      console.error("Error generating podcast:", error);
+      alert("Something went wrong!");
     }
-
     setLoading(false);
   };
 
-  const handlePlay = () => {
-    if (!article?.content || speakingRef.current) return;
-    setIsSpeaking(true);
-    speakingRef.current = true;
-
-    convertTextToSpeech(article.content, () => {
-      setIsSpeaking(false);
-      speakingRef.current = false;
-    });
-  };
-
-  const handleStop = () => {
-    window.speechSynthesis.cancel();
-    setIsSpeaking(false);
-    speakingRef.current = false;
-  };
-
-  useEffect(() => {
-    // Cancel speech if component unmounts
-    return () => window.speechSynthesis.cancel();
-  }, []);
-
   return (
     <div
-      className="relative min-h-screen flex flex-col justify-center items-center bg-cover bg-center p-8"
+      className="relative min-h-screen flex flex-col justify-center items-center bg-cover bg-center overflow-hidden"
       style={{ backgroundImage: `url(${starwarsBg})` }}
     >
-      {/* Vader Button */}
+      {/* Bottom right Darth Vader image */}
       <div className="fixed bottom-4 right-4 z-50">
         <button
-          onClick={() => (window.location.href = "/darth-vader")}
+          onClick={() => window.location.href = "/darth-vader"}
           className="rounded-full overflow-hidden w-16 h-16 border-4 border-yellow-500 shadow-lg hover:scale-110 transition-transform duration-300"
         >
-          <img src={darthVader} alt="Darth Vader" className="w-full h-full object-cover" />
+          <img
+            src={darthVader}
+            alt="Darth Vader"
+            className="w-full h-full object-cover"
+          />
         </button>
       </div>
 
-      {/* Top bar */}
-      <div className="absolute top-0 left-0 right-0 bg-black bg-opacity-60 flex justify-between items-center px-8 py-4 z-10">
+      {/* Top bar with logo */}
+      <div className="absolute top-0 left-0 right-0 bg-black bg-opacity-60 flex justify-start items-center px-8 py-4 z-10">
         <div className="flex items-center">
           <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-yellow-400">
             <img src={logo} alt="Logo" className="w-full h-full object-cover" />
           </div>
         </div>
-        <div className="flex space-x-4 items-center">
-          <button className="text-yellow-400 font-starwars text-lg hover:text-yellow-500 transition">
-            Login
-          </button>
-          <button className="text-yellow-400 font-starwars text-lg border border-yellow-400 rounded-full px-4 py-1 hover:bg-yellow-400 hover:text-black transition">
-            Signup
-          </button>
-        </div>
       </div>
 
-      {/* Title & Subtitle */}
-      <h1 className="text-yellow-400 text-6xl md:text-8xl font-starwars text-center drop-shadow-[2px_2px_0_black] mb-6">
-        Talkify: The Podcast Force Awakens
-      </h1>
-      <p className="text-yellow-400 text-2xl md:text-3xl font-starwars text-center drop-shadow-[2px_2px_0_black] mb-12 max-w-2xl">
-        Paste a URL below and generate your Star Wars-inspired podcast!
-      </p>
+      {/* Title with crawl style & black border */}
+      <h1 className="text-yellow-400 text-6xl md:text-8xl font-starwars text-center animate-crawl3d mb-6 drop-shadow-[2px_2px_0_black] border-black border-4 px-4">
+  Talkify: The Podcast Force Awakens
+</h1>
 
-      {/* Input */}
+<p className="text-yellow-400 text-2xl md:text-3xl font-starwars text-center drop-shadow-[2px_2px_0_black] mb-12 max-w-2xl animate-crawl3d">
+  Paste a URL below and generate your Star Wars-inspired podcast!
+</p>
+
+
+      {/* URL Input + Generate Button */}
       <div className="flex flex-col sm:flex-row items-center w-full max-w-xl space-y-4 sm:space-y-0 sm:space-x-4 z-10">
         <input
           type="text"
           placeholder="Enter article URL..."
+          className="flex-grow p-4 rounded-lg text-black font-starwars text-lg outline-none border-2 border-yellow-400 focus:ring-2 focus:ring-yellow-500 transition"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          className="flex-grow p-4 rounded-lg text-black font-starwars text-lg outline-none border-2 border-yellow-400 focus:ring-2 focus:ring-yellow-500 transition"
         />
         <button
           onClick={handleGenerate}
-          className="px-6 py-4 bg-yellow-400 text-black font-starwars text-lg rounded-lg hover:bg-yellow-500 transition"
-          disabled={loading}
+          disabled={loading || !url}
+          className={`px-6 py-4 font-starwars text-lg rounded-lg transition text-black ${
+            loading || !url
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-yellow-400 hover:bg-yellow-500"
+          }`}
         >
-          {loading ? "Loading..." : "Generate Podcast"}
+          {loading ? "Generating..." : "Generate Podcast"}
         </button>
       </div>
 
-      {/* Error */}
-      {error && (
-        <p className="text-red-400 text-lg font-starwars mt-4">{error}</p>
+      {/* Article text & audio output */}
+      {articleText && (
+        <div className="bg-black bg-opacity-70 mt-12 max-w-3xl w-full p-6 rounded-lg shadow text-yellow-300 font-starwars overflow-y-auto max-h-96 z-10">
+          <h2 className="text-2xl font-bold mb-4">Article Text:</h2>
+          <p className="whitespace-pre-wrap">{articleText}</p>
+        </div>
       )}
 
-      {/* Output */}
-      {article && (
-        <div className="bg-black bg-opacity-70 p-6 mt-6 rounded-lg border-2 border-yellow-500 shadow-lg max-w-3xl text-white space-y-4 z-10">
-          <h2 className="text-3xl font-starwars border-b border-yellow-400 pb-2">
-            {article.title}
+      {audioUrl && (
+        <div className="bg-black bg-opacity-70 mt-8 max-w-3xl w-full p-6 rounded-lg shadow flex flex-col items-center z-10">
+          <h2 className="text-2xl font-bold mb-4 text-yellow-300 font-starwars">
+            Podcast Audio:
           </h2>
-
-          <p className="text-yellow-300 font-starwars text-xl mt-4">Full Article:</p>
-          <p className="text-md font-starwars whitespace-pre-line">{article.content}</p>
-
-          {/* TTS Controls */}
-          <div className="flex space-x-4 mt-6">
-            <button
-              onClick={handlePlay}
-              disabled={isSpeaking}
-              className="px-4 py-2 bg-yellow-400 text-black font-starwars rounded hover:bg-yellow-500 transition disabled:opacity-50"
-            >
-              ▶️ Play
-            </button>
-            <button
-              onClick={handleStop}
-              disabled={!isSpeaking}
-              className="px-4 py-2 bg-yellow-400 text-black font-starwars rounded hover:bg-yellow-500 transition disabled:opacity-50"
-            >
-              ⏹ Stop
-            </button>
-          </div>
+          <audio controls src={audioUrl} className="w-full mb-4" />
         </div>
       )}
     </div>
